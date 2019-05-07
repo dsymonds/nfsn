@@ -75,7 +75,21 @@ func (c *Client) authHeader(reqURI string, body []byte) string {
 	return fmt.Sprintf("%s;%s;%s;%02x", c.user, ts, salt, sha1.Sum([]byte(hashInput)))
 }
 
-func (c *Client) http(method, path string, body []byte) ([]byte, error) {
+func (c *Client) http(method, path string, body interface{}) ([]byte, error) {
+	hdr := make(http.Header)
+
+	var encBody []byte
+	switch x := body.(type) {
+	case nil:
+	case []byte:
+		encBody = x
+	case url.Values:
+		encBody = []byte(x.Encode())
+		hdr.Set("Content-Type", "application/x-www-form-urlencoded")
+	default:
+		panic(fmt.Sprintf("invalid body type %T", x))
+	}
+
 	req := &http.Request{
 		Method: method,
 		URL: &url.URL{
@@ -83,10 +97,10 @@ func (c *Client) http(method, path string, body []byte) ([]byte, error) {
 			Host:   "api.nearlyfreespeech.net",
 			Path:   path,
 		},
-		Header: make(http.Header),
-		Body:   ioutil.NopCloser(bytes.NewReader(body)),
+		Header: hdr,
+		Body:   ioutil.NopCloser(bytes.NewReader(encBody)),
 	}
-	req.Header.Set("X-NFSN-Authentication", c.authHeader(req.URL.Path, body))
+	req.Header.Set("X-NFSN-Authentication", c.authHeader(req.URL.Path, encBody))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -104,11 +118,12 @@ func (c *Client) http(method, path string, body []byte) ([]byte, error) {
 }
 
 type DNSRR struct {
-	Name  string // e.g. name of subdomain
-	Type  string // e.g. "A", "CNAME", "NS"
-	Data  string // IP for A, FQDN for CNAME, NS
-	TTL   int    // seconds
-	Scope string // e.g. "system", "member"
+	Name string // e.g. name of subdomain
+	Type string // e.g. "A", "CNAME", "NS"
+	Data string // IP for A, FQDN for CNAME, NS
+	TTL  int    // seconds
+
+	//Scope string // e.g. "system", "member"
 }
 
 func (c *Client) DNSListRRs(domain string) ([]DNSRR, error) {
@@ -121,4 +136,17 @@ func (c *Client) DNSListRRs(domain string) ([]DNSRR, error) {
 		return nil, fmt.Errorf("bad JSON response: %v", err)
 	}
 	return resp, nil
+}
+
+func (c *Client) DNSAddRR(domain string, rr DNSRR) error {
+	args := url.Values{
+		"name": []string{rr.Name},
+		"type": []string{rr.Type},
+		"data": []string{rr.Data},
+	}
+	if rr.TTL > 0 {
+		args["ttl"] = []string{strconv.Itoa(rr.TTL)}
+	}
+	_, err := c.http("POST", "/dns/"+url.PathEscape(domain)+"/addRR", args)
+	return err
 }
