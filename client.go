@@ -126,8 +126,17 @@ type DNSRR struct {
 	//Scope string // e.g. "system", "member"
 }
 
-func (c *Client) DNSListRRs(domain string) ([]DNSRR, error) {
-	body, err := c.http("POST", "/dns/"+url.PathEscape(domain)+"/listRRs", nil)
+type DNS struct {
+	c      *Client
+	domain string
+}
+
+func (c *Client) DNS(domain string) DNS {
+	return DNS{c: c, domain: domain}
+}
+
+func (d DNS) RRs() ([]DNSRR, error) {
+	body, err := d.c.http("POST", "/dns/"+url.PathEscape(d.domain)+"/listRRs", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +147,7 @@ func (c *Client) DNSListRRs(domain string) ([]DNSRR, error) {
 	return resp, nil
 }
 
-func (c *Client) DNSAddRR(domain string, rr DNSRR) error {
+func (d DNS) AddRR(rr DNSRR) error {
 	args := url.Values{
 		"name": []string{rr.Name},
 		"type": []string{rr.Type},
@@ -147,6 +156,6 @@ func (c *Client) DNSAddRR(domain string, rr DNSRR) error {
 	if rr.TTL > 0 {
 		args["ttl"] = []string{strconv.Itoa(rr.TTL)}
 	}
-	_, err := c.http("POST", "/dns/"+url.PathEscape(domain)+"/addRR", args)
+	_, err := d.c.http("POST", "/dns/"+url.PathEscape(d.domain)+"/addRR", args)
 	return err
 }

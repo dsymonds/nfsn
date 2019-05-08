@@ -40,7 +40,8 @@ func main() {
 	}
 	log.Printf("Public IP: %s", ip)
 
-	rrs, err := client.DNSListRRs(*domain)
+	dns := client.DNS(*domain)
+	rrs, err := dns.RRs()
 	if err != nil {
 		log.Fatalf("Getting current RRs for %s: %v", *domain, err)
 	}
@@ -60,7 +61,7 @@ func main() {
 		// TODO: delete existing record.
 	}
 
-	if err := client.DNSAddRR(*domain, nfsn.DNSRR{
+	if err := dns.AddRR(nfsn.DNSRR{
 		Name: *subDomain,
 		Type: "A",
 		Data: ip,
