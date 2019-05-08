@@ -65,14 +65,18 @@ func (c *Client) authHeader(reqURI string, body []byte) string {
 	}
 	c.rngMu.Unlock()
 
+	return genAuthHeader(c.user, time.Now(), salt[:], c.apiKey, reqURI, body)
+}
+
+func genAuthHeader(user string, t time.Time, salt []byte, apiKey, reqURI string, body []byte) string {
 	// Header is "login;timestamp;salt;hash".
 	// hash is SHA1("login;timestamp;salt;api-key;request-uri;body-hash")
 	// and body-hash is SHA1(body).
 	bodyHash := sha1.Sum(body)
-	ts := strconv.FormatInt(time.Now().Unix(), 10)
-	hashInput := fmt.Sprintf("%s;%s;%s;%s;%s;%02x", c.user, ts, salt, c.apiKey, reqURI, bodyHash)
+	ts := strconv.FormatInt(t.Unix(), 10)
+	hashInput := fmt.Sprintf("%s;%s;%s;%s;%s;%02x", user, ts, salt, apiKey, reqURI, bodyHash)
 
-	return fmt.Sprintf("%s;%s;%s;%02x", c.user, ts, salt, sha1.Sum([]byte(hashInput)))
+	return fmt.Sprintf("%s;%s;%s;%02x", user, ts, salt, sha1.Sum([]byte(hashInput)))
 }
 
 func (c *Client) http(method, path string, body interface{}) ([]byte, error) {
