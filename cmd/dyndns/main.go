@@ -17,7 +17,15 @@ import (
 var (
 	domain    = flag.String("domain", "", "which domain to modify")
 	subDomain = flag.String("subdomain", "", "which subdomain tracks the public IP")
+	q         = flag.Bool("q", false, "whether to be quiet, except for errors")
 )
+
+func infof(format string, args ...interface{}) {
+	if *q {
+		return
+	}
+	log.Printf(format, args...)
+}
 
 func main() {
 	// TODO: better usage
@@ -38,7 +46,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Getting public IP: %v", err)
 	}
-	log.Printf("Public IP: %s", ip)
+	infof("Public IP: %s", ip)
 
 	dns := client.DNS(*domain)
 	rrs, err := dns.RRs()
@@ -48,14 +56,14 @@ func main() {
 	existing, ok := nfsn.DNSRR{}, false
 	for _, rr := range rrs {
 		if rr.Name == *subDomain {
-			log.Printf("Found existing RR: %v", rr)
+			infof("Found existing RR: %v", rr)
 			existing, ok = rr, true
 			break
 		}
 	}
 	if ok {
 		if existing.Data == ip && existing.Type == "A" {
-			log.Printf("(%s).%s already configured correctly", *subDomain, *domain)
+			infof("(%s).%s already configured correctly", *subDomain, *domain)
 			return
 		}
 		log.Printf("Existing RR has incorrect configuration")
@@ -72,7 +80,7 @@ func main() {
 	}); err != nil {
 		log.Fatalf("Setting new RR: %v", err)
 	}
-	log.Printf("New RR created")
+	infof("New RR created")
 }
 
 func publicIP() (string, error) {
