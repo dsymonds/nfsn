@@ -163,3 +163,13 @@ func (d DNS) AddRR(rr DNSRR) error {
 	_, err := d.c.http("POST", "/dns/"+url.PathEscape(d.domain)+"/addRR", args)
 	return err
 }
+
+func (d DNS) DeleteRR(rr DNSRR) error {
+	args := url.Values{
+		"name": []string{rr.Name},
+		"type": []string{rr.Type},
+		"data": []string{rr.Data},
+	}
+	_, err := d.c.http("POST", "/dns/"+url.PathEscape(d.domain)+"/removeRR", args)
+	return err
+}

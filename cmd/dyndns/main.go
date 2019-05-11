@@ -45,20 +45,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("Getting current RRs for %s: %v", *domain, err)
 	}
-	existing := ""
+	existing, ok := nfsn.DNSRR{}, false
 	for _, rr := range rrs {
-		if rr.Name == *subDomain && rr.Type == "A" {
-			log.Printf("Found existing RR: %#v", rr)
-			existing = rr.Data
+		if rr.Name == *subDomain {
+			log.Printf("Found existing RR: %v", rr)
+			existing, ok = rr, true
 			break
 		}
 	}
-	if existing == ip {
-		log.Printf("(%s).%s already set correctly", *subDomain, *domain)
-		return
-	}
-	if existing != "" {
-		// TODO: delete existing record.
+	if ok {
+		if existing.Data == ip && existing.Type == "A" {
+			log.Printf("(%s).%s already configured correctly", *subDomain, *domain)
+			return
+		}
+		log.Printf("Existing RR has incorrect configuration")
+		if err := dns.DeleteRR(existing); err != nil {
+			log.Fatalf("Deleting existing RR: %v", err)
+		}
 	}
 
 	if err := dns.AddRR(nfsn.DNSRR{
