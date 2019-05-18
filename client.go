@@ -34,6 +34,10 @@ func NewClient() (*Client, error) {
 		return nil, fmt.Errorf("finding user's home dir: %v", err)
 	}
 	configFile := filepath.Join(home, ".nfsn-api")
+	return NewClientFromFile(configFile)
+}
+
+func NewClientFromFile(configFile string) (*Client, error) {
 	raw, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %v", configFile, err)

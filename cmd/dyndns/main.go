@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	config    = flag.String("config", "", "if set, file containing client config")
 	domain    = flag.String("domain", "", "which domain to modify")
 	subDomain = flag.String("subdomain", "", "which subdomain tracks the public IP")
 	q         = flag.Bool("q", false, "whether to be quiet, except for errors")
@@ -37,7 +38,13 @@ func main() {
 		log.Fatal("-subdomain must be set")
 	}
 
-	client, err := nfsn.NewClient()
+	var client *nfsn.Client
+	var err error
+	if *config == "" {
+		client, err = nfsn.NewClient()
+	} else {
+		client, err = nfsn.NewClientFromFile(*config)
+	}
 	if err != nil {
 		log.Fatalf("Initialising: %v", err)
 	}
